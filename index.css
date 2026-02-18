@@ -548,3 +548,174 @@ html, body {
   object-fit: cover;
   object-position: center 15%;
 }
+
+/* ============================================================
+   CINEMATIC AMBIENT EFFECTS
+   ============================================================ */
+
+/* Aurora orb drifts */
+@keyframes orbDrift1 {
+  0%,100% { transform: translate(0,0) scale(1); opacity: 0.7; }
+  33%      { transform: translate(60px,-40px) scale(1.1); opacity: 1; }
+  66%      { transform: translate(-40px,30px) scale(0.95); opacity: 0.55; }
+}
+@keyframes orbDrift2 {
+  0%,100% { transform: translate(0,0) scale(1); opacity: 0.55; }
+  40%     { transform: translate(-80px,50px) scale(1.15); opacity: 0.8; }
+  70%     { transform: translate(50px,-60px) scale(0.9); opacity: 0.4; }
+}
+@keyframes orbDrift3 {
+  0%,100% { transform: translate(0,0) scale(1); opacity: 0.45; }
+  50%     { transform: translate(40px,60px) scale(1.2); opacity: 0.65; }
+}
+
+/* Firefly float */
+@keyframes fireflyFloat {
+  0%   { transform: translate(0,0) scale(1); opacity: 0; }
+  10%  { opacity: 0.85; }
+  45%  { transform: translate(30px,-50px) scale(0.8); opacity: 0.6; }
+  80%  { transform: translate(-20px,40px) scale(1.1); opacity: 0.35; }
+  90%  { opacity: 0; }
+  100% { transform: translate(0,0) scale(1); opacity: 0; }
+}
+
+/* Star twinkle */
+@keyframes starTwinkle {
+  0%,100% { opacity: 0.08; transform: scale(1); }
+  50%     { opacity: 0.65; transform: scale(1.5); }
+}
+
+/* Scan line sweep */
+@keyframes scanLineAnim {
+  0%   { top: -2px; opacity: 0; }
+  4%   { opacity: 0.9; }
+  96%  { opacity: 0.25; }
+  100% { top: 100vh; opacity: 0; }
+}
+
+/* Click ripple expand */
+@keyframes inkExpand {
+  0%   { transform: translate(-50%,-50%) scale(0); opacity: 0.65; }
+  100% { transform: translate(-50%,-50%) scale(7); opacity: 0; }
+}
+
+/* Section vignette glow pulse */
+@keyframes sectionGlow {
+  0%,100% { opacity: 0.3; }
+  50%     { opacity: 0.6; }
+}
+
+/* ===== Ambient Aurora ===== */
+.ambient-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(72px);
+  will-change: transform, opacity;
+}
+.aurora-orb-1 {
+  width: 620px; height: 620px;
+  top: -120px; right: -80px;
+  background: radial-gradient(circle, rgba(201,169,110,0.09) 0%, rgba(201,169,110,0.03) 50%, transparent 70%);
+  animation: orbDrift1 26s ease-in-out infinite;
+}
+.aurora-orb-2 {
+  width: 520px; height: 520px;
+  bottom: 15%; left: -100px;
+  background: radial-gradient(circle, rgba(26,74,46,0.13) 0%, rgba(201,169,110,0.04) 55%, transparent 70%);
+  animation: orbDrift2 32s ease-in-out infinite;
+}
+.aurora-orb-3 {
+  width: 420px; height: 420px;
+  top: 38%; right: 18%;
+  background: radial-gradient(circle, rgba(201,169,110,0.07) 0%, transparent 70%);
+  animation: orbDrift3 21s ease-in-out infinite;
+  animation-delay: -9s;
+}
+.aurora-orb-4 {
+  width: 720px; height: 720px;
+  bottom: -180px; right: 28%;
+  background: radial-gradient(circle, rgba(26,74,46,0.11) 0%, rgba(201,169,110,0.025) 60%, transparent 70%);
+  animation: orbDrift1 38s ease-in-out infinite reverse;
+  animation-delay: -17s;
+}
+
+/* ===== Firefly Field ===== */
+.firefly-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.firefly {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #c9a96e;
+  box-shadow: 0 0 7px 2px rgba(201,169,110,0.65);
+  animation: fireflyFloat var(--dur, 8s) ease-in-out infinite;
+  animation-delay: var(--del, 0s);
+}
+
+/* ===== Star Field ===== */
+.star-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.star-dot {
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: #c9a96e;
+  animation: starTwinkle var(--dur, 3s) ease-in-out infinite;
+  animation-delay: var(--del, 0s);
+}
+
+/* ===== Scan Line ===== */
+.scan-line {
+  position: fixed;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(201,169,110,0.25) 25%,
+    rgba(201,169,110,0.55) 50%,
+    rgba(201,169,110,0.25) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+  animation: scanLineAnim 14s linear infinite;
+}
+
+/* ===== Click Ripple ===== */
+.ink-ripple {
+  position: fixed;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(201,169,110,0.75);
+  pointer-events: none;
+  z-index: 9998;
+  animation: inkExpand 0.85s ease-out forwards;
+}
+
+/* ===== Section Glow Accent ===== */
+.section-glow-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,169,110,0.4) 50%, transparent);
+  animation: sectionGlow 4s ease-in-out infinite;
+  pointer-events: none;
+}

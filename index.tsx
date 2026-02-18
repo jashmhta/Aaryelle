@@ -271,6 +271,97 @@ const useAudioEngine = () => {
 };
 
 // ============================================================
+// AMBIENT CINEMATIC COMPONENTS
+// ============================================================
+
+/** AmbientAurora — slow-drifting radial gradient orbs layered in the background */
+const AmbientAurora = () => {
+  if (REDUCED_MOTION) return null;
+  return (
+    <div className="ambient-aurora" aria-hidden="true">
+      <div className="aurora-orb aurora-orb-1" />
+      <div className="aurora-orb aurora-orb-2" />
+      <div className="aurora-orb aurora-orb-3" />
+      <div className="aurora-orb aurora-orb-4" />
+    </div>
+  );
+};
+
+// Pre-computed firefly positions to avoid recalculation per render
+const FIREFLY_DATA = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  left: `${5 + (i * 17 + i * i * 3) % 90}%`,
+  top:  `${10 + (i * 23 + i * 7) % 80}%`,
+  dur:  `${6 + (i * 3) % 8}s`,
+  del:  `-${(i * 1.3) % 7}s`,
+}));
+
+/** FireflyField — 18 gold firefly dots floating with offset animations */
+const FireflyField = () => {
+  if (REDUCED_MOTION) return null;
+  return (
+    <div className="firefly-field" aria-hidden="true">
+      {FIREFLY_DATA.map(f => (
+        <div key={f.id} className="firefly"
+          style={{ left: f.left, top: f.top, "--dur": f.dur, "--del": f.del } as React.CSSProperties} />
+      ))}
+    </div>
+  );
+};
+
+// Pre-computed star positions
+const STAR_DATA = Array.from({ length: 30 }, (_, i) => ({
+  id: i,
+  left: `${(i * 29 + i * i * 7) % 100}%`,
+  top:  `${(i * 37 + i * 11) % 100}%`,
+  dur:  `${2 + (i * 0.7) % 4}s`,
+  del:  `-${(i * 0.9) % 4}s`,
+  size: i % 3 === 0 ? "3px" : "2px",
+}));
+
+/** StarField — 30 subtly twinkling gold star dots */
+const StarField = () => {
+  if (REDUCED_MOTION) return null;
+  return (
+    <div className="star-field" aria-hidden="true">
+      {STAR_DATA.map(s => (
+        <div key={s.id} className="star-dot"
+          style={{ left: s.left, top: s.top, width: s.size, height: s.size, "--dur": s.dur, "--del": s.del } as React.CSSProperties} />
+      ))}
+    </div>
+  );
+};
+
+/** ClickRipple — gold circular ink-drop ripple on every mouse click */
+type Ripple = { id: number; x: number; y: number };
+const ClickRipple = () => {
+  const [ripples, setRipples] = useState<Ripple[]>([]);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const id = Date.now() + Math.random();
+      setRipples(r => [...r.slice(-5), { id, x: e.clientX, y: e.clientY }]);
+      setTimeout(() => setRipples(r => r.filter(x => x.id !== id)), 950);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+  if (REDUCED_MOTION) return null;
+  return (
+    <>
+      {ripples.map(r => (
+        <div key={r.id} className="ink-ripple" style={{ left: r.x, top: r.y }} />
+      ))}
+    </>
+  );
+};
+
+/** ScanLine — slow horizontal gold scan line sweeping down */
+const ScanLine = () => {
+  if (REDUCED_MOTION) return null;
+  return <div className="scan-line" aria-hidden="true" />;
+};
+
+// ============================================================
 // GSAP-POWERED CINEMATIC COMPONENTS
 // ============================================================
 
@@ -2339,6 +2430,11 @@ const App = () => {
 
   return (
     <>
+      <AmbientAurora />
+      <StarField />
+      <FireflyField />
+      <ScanLine />
+      <ClickRipple />
       <CustomCursor />
       <ScrollProgress />
       <TransitionCurtain isActive={isTransitioning} onTransitionEnd={finishTransition} />
