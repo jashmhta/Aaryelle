@@ -12,7 +12,8 @@ import { createRoot } from "react-dom/client";
 import {
   ShoppingBag, X, ArrowRight, Menu,
   Volume2, VolumeX, Minus, Plus, Star, Sparkles,
-  ChevronLeft, ChevronRight, Send
+  ChevronLeft, ChevronRight, Send, Heart, Search,
+  Truck, Award, RotateCcw, ShieldCheck
 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 import { gsap } from "gsap";
@@ -132,6 +133,19 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   const total = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   return <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, total, itemCount, isOpen, setIsOpen }}>{children}</CartContext.Provider>;
+};
+
+// ============================================================
+// WISHLIST CONTEXT
+// ============================================================
+
+const WishlistContext = createContext<{ ids: Set<number>; toggle: (id: number) => void; has: (id: number) => boolean }>({ ids: new Set(), toggle: () => {}, has: () => false });
+const useWishlist = () => useContext(WishlistContext);
+const WishlistProvider = ({ children }: { children: ReactNode }) => {
+  const [ids, setIds] = useState<Set<number>>(new Set());
+  const toggle = useCallback((id: number) => setIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }), []);
+  const has = useCallback((id: number) => ids.has(id), [ids]);
+  return <WishlistContext.Provider value={{ ids, toggle, has }}>{children}</WishlistContext.Provider>;
 };
 
 // ============================================================
@@ -266,6 +280,7 @@ const Reveal = ({
     const el = ref.current; if (!el) return;
     if (REDUCED_MOTION) { el.style.opacity = "1"; return; }
     const ctx = gsap.context(() => {
+      gsap.set(el, { opacity: 0, y });
       gsap.fromTo(el, { opacity: 0, y }, {
         opacity: 1, y: 0, duration, delay, ease: "power3.out",
         scrollTrigger: { trigger: el, start, toggleActions: "play none none none" }
@@ -273,7 +288,7 @@ const Reveal = ({
     });
     return () => ctx.revert();
   }, [y, delay, duration, start]);
-  return <div ref={ref} className={className} style={{ opacity: REDUCED_MOTION ? 1 : 0 }}>{children}</div>;
+  return <div ref={ref} className={className}>{children}</div>;
 };
 
 /** ClipReveal — Cinematic clip-path wipe */
@@ -289,6 +304,7 @@ const ClipReveal = ({
     const el = ref.current; if (!el) return;
     if (REDUCED_MOTION) { el.style.clipPath = "inset(0% 0% 0% 0%)"; return; }
     const ctx = gsap.context(() => {
+      gsap.set(el, { clipPath: from });
       gsap.fromTo(el, { clipPath: from }, {
         clipPath: "inset(0% 0% 0% 0%)", duration, delay, ease: "power4.inOut",
         scrollTrigger: { trigger: el, start: "top 90%", toggleActions: "play none none none" }
@@ -296,7 +312,7 @@ const ClipReveal = ({
     });
     return () => ctx.revert();
   }, [direction, delay, duration, from]);
-  return <div ref={ref} className={className} style={{ clipPath: REDUCED_MOTION ? "inset(0% 0% 0% 0%)" : from }}>{children}</div>;
+  return <div ref={ref} className={className}>{children}</div>;
 };
 
 /** ImageParallax — Scroll-driven depth parallax */
@@ -361,6 +377,7 @@ const SplitWords = ({
     const inners = el.querySelectorAll<HTMLElement>(".sw-in");
     if (REDUCED_MOTION) { inners.forEach(n => { n.style.transform = "translateY(0%)"; }); return; }
     const ctx = gsap.context(() => {
+      gsap.set(inners, { yPercent: 108 });
       gsap.fromTo(inners, { yPercent: 108 }, {
         yPercent: 0, duration, stagger, delay, ease: "power4.out",
         scrollTrigger: { trigger: el, start, toggleActions: "play none none none" }
@@ -373,7 +390,7 @@ const SplitWords = ({
     <span ref={ref} className={`inline ${className}`} aria-label={text}>
       {words.map((word, i) => (
         <span key={i} className="inline-block overflow-hidden" aria-hidden="true" style={{ verticalAlign: "bottom" }}>
-          <span className="sw-in inline-block" style={{ transform: "translateY(108%)" }}>{word}</span>
+          <span className="sw-in inline-block">{word}</span>
           {i < words.length - 1 && <span aria-hidden="true">&nbsp;</span>}
         </span>
       ))}
@@ -392,6 +409,7 @@ const SplitWordsHero = ({
     const el = ref.current; if (!el) return;
     const inners = el.querySelectorAll<HTMLElement>(".swh-in");
     const ctx = gsap.context(() => {
+      gsap.set(inners, { yPercent: 108 });
       gsap.fromTo(inners, { yPercent: 108 }, {
         yPercent: 0, duration, stagger, delay, ease: "power4.out",
       });
@@ -403,7 +421,7 @@ const SplitWordsHero = ({
     <span ref={ref} className={`inline ${className}`} aria-label={text}>
       {words.map((word, i) => (
         <span key={i} className="inline-block overflow-hidden" aria-hidden="true" style={{ verticalAlign: "bottom" }}>
-          <span className="swh-in inline-block" style={{ transform: "translateY(108%)" }}>{word}</span>
+          <span className="swh-in inline-block">{word}</span>
           {i < words.length - 1 && <span aria-hidden="true">&nbsp;</span>}
         </span>
       ))}
@@ -688,6 +706,51 @@ const TransitionCurtain = ({ isActive, onTransitionEnd }: { isActive: boolean; o
 };
 
 // ============================================================
+// SEARCH OVERLAY
+// ============================================================
+
+const SearchOverlay = ({ onClose, onSelectProduct }: { onClose: () => void; onSelectProduct: (p: Product) => void }) => {
+  const [query, setQuery] = useState("");
+  const results = query.trim().length > 0
+    ? PRODUCTS.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()))
+    : PRODUCTS;
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col" role="dialog" aria-label="Search">
+      <div className="absolute inset-0 bg-void/95 backdrop-blur-lg" onClick={onClose} />
+      <div className="relative z-10 max-w-2xl mx-auto w-full mt-20 md:mt-32 px-6">
+        <div className="flex items-center gap-4 border-b border-gold/30 pb-4 mb-8">
+          <Search className="w-5 h-5 text-gold shrink-0" />
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Search products..."
+            className="flex-1 bg-transparent font-display text-2xl md:text-3xl text-ivory italic outline-none placeholder:text-ivory/20" />
+          <button onClick={onClose} className="text-ivory/60 hover:text-gold interactive cursor-pointer"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto">
+          {results.map(p => (
+            <button key={p.id} onClick={() => { onSelectProduct(p); onClose(); }}
+              className="text-left group interactive cursor-pointer">
+              <div className="aspect-[3/4] overflow-hidden mb-2 bento-card">
+                <img src={p.image} alt={p.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" />
+              </div>
+              <p className="font-display text-sm text-ivory italic">{p.name}</p>
+              <p className="font-body text-xs text-gold">₹{p.price.toLocaleString("en-IN")}</p>
+            </button>
+          ))}
+          {results.length === 0 && <p className="col-span-3 font-display text-2xl text-ivory/50 italic text-center py-8">No results found</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // NAV ITEM — isolated so hooks run at component top level
 // ============================================================
 
@@ -713,8 +776,8 @@ const NavItem = ({ item, isActive, onNavigate }: {
 // NAVIGATION
 // ============================================================
 
-const Navigation = ({ view, navigate, audioEnabled, toggleAudio }: {
-  view: ViewState; navigate: (v: ViewState) => void; audioEnabled: boolean; toggleAudio: () => void;
+const Navigation = ({ view, navigate, audioEnabled, toggleAudio, onSearchOpen }: {
+  view: ViewState; navigate: (v: ViewState) => void; audioEnabled: boolean; toggleAudio: () => void; onSearchOpen: () => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -733,6 +796,7 @@ const Navigation = ({ view, navigate, audioEnabled, toggleAudio }: {
   useEffect(() => {
     if (!navRef.current || REDUCED_MOTION) return;
     const ctx = gsap.context(() => {
+      gsap.set(navRef.current, { y: -20, opacity: 0 });
       gsap.fromTo(navRef.current, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.1 });
     });
     return () => ctx.revert();
@@ -749,7 +813,7 @@ const Navigation = ({ view, navigate, audioEnabled, toggleAudio }: {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[10002] focus:bg-gold focus:text-noir focus:px-4 focus:py-2 focus:font-sans focus:text-xs focus:tracking-widest">
         Skip to main content
       </a>
-      <nav ref={navRef} style={{ opacity: REDUCED_MOTION ? 1 : 0 }} className={`fixed top-0 w-full px-6 md:px-12 py-5 z-50 flex justify-between items-center transition-all duration-700 ${scrolled ? "glass-nav py-3.5" : ""}`} role="navigation" aria-label="Main navigation">
+      <nav ref={navRef} className={`fixed top-0 w-full px-6 md:px-12 py-5 z-50 flex justify-between items-center transition-all duration-700 ${scrolled ? "glass-nav py-3.5" : ""}`} role="navigation" aria-label="Main navigation">
         <div className="flex items-center gap-3 cursor-pointer group interactive" onClick={() => navigate("HOME")} role="button" tabIndex={0} aria-label="Home" onKeyDown={e => e.key === "Enter" && navigate("HOME")}>
           <Emblem className="h-10 md:h-14 w-auto opacity-90 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
@@ -759,20 +823,23 @@ const Navigation = ({ view, navigate, audioEnabled, toggleAudio }: {
           ))}
         </div>
         <div className="flex items-center gap-5">
-          <button onClick={toggleAudio} className="hidden md:flex text-ivory/40 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-label={audioEnabled ? "Mute" : "Enable audio"}>
+          <button onClick={toggleAudio} className="hidden md:flex text-ivory/60 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-label={audioEnabled ? "Mute" : "Enable audio"}>
             {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
-          <button onClick={() => setCartOpen(true)} className="relative text-ivory/40 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-label={`Cart (${itemCount})`}>
+          <button onClick={onSearchOpen} className="hidden md:flex text-ivory/60 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-label="Search">
+            <Search className="w-4 h-4" />
+          </button>
+          <button onClick={() => setCartOpen(true)} className="relative text-ivory/60 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-label={`Cart (${itemCount})`}>
             <ShoppingBag className="w-4 h-4" />
             {itemCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gold text-noir rounded-full flex items-center justify-center text-[8px] font-bold">{itemCount}</span>}
           </button>
-          <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden text-ivory/40 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-expanded={isOpen}>
+          <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden text-ivory/60 hover:text-gold transition-colors duration-300 interactive cursor-pointer" aria-expanded={isOpen}>
             <Menu className="w-4 h-4" />
           </button>
         </div>
       </nav>
       <div className={`fixed inset-0 bg-void z-40 transition-all duration-700 ease-[cubic-bezier(0.85,0,0.15,1)] ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} aria-hidden={!isOpen} role="dialog">
-        <button onClick={() => setIsOpen(false)} className="absolute top-5 right-6 text-ivory/50 hover:text-gold transition-colors interactive cursor-pointer" aria-label="Close"><X className="w-5 h-5" /></button>
+        <button onClick={() => setIsOpen(false)} className="absolute top-5 right-6 text-ivory/70 hover:text-gold transition-colors interactive cursor-pointer" aria-label="Close"><X className="w-5 h-5" /></button>
         <div className="h-full flex flex-col justify-center items-center gap-1">
           {menuItems.map((item, i) => (
             <button key={item.label} onClick={() => { setIsOpen(false); setTimeout(() => navigate(item.view), 300); }}
@@ -781,6 +848,10 @@ const Navigation = ({ view, navigate, audioEnabled, toggleAudio }: {
               {item.label}
             </button>
           ))}
+        </div>
+        <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-8">
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="font-sans text-[10px] tracking-widest text-ivory/50 hover:text-gold uppercase interactive cursor-pointer">Instagram</a>
+          <a href="https://wa.me/919819998988" target="_blank" rel="noopener noreferrer" className="font-sans text-[10px] tracking-widest text-ivory/50 hover:text-gold uppercase interactive cursor-pointer">WhatsApp</a>
         </div>
       </div>
     </>
@@ -809,15 +880,35 @@ const CartDrawer = () => {
           <div className="flex items-center justify-between p-6 md:p-8 border-b border-gold/8">
             <div>
               <h2 className="font-sans text-[11px] tracking-[0.25em] text-gold uppercase">Your Cart</h2>
-              <p className="font-body text-ivory/50 text-sm mt-1">{itemCount} item{itemCount !== 1 ? "s" : ""}</p>
+              <p className="font-body text-ivory/70 text-sm mt-1">{itemCount} item{itemCount !== 1 ? "s" : ""}</p>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-ivory/40 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
+            <button onClick={() => setIsOpen(false)} className="text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
           </div>
+          {/* Free shipping progress */}
+          {(() => {
+            const threshold = 1999;
+            const remaining = Math.max(0, threshold - total);
+            const progress = Math.min(100, (total / threshold) * 100);
+            return (
+              <div className="px-6 md:px-8 py-3 bg-warm/40 border-b border-gold/8">
+                {remaining > 0 ? (
+                  <p className="font-sans text-[10px] tracking-wider text-ivory/70 mb-2 uppercase">
+                    Add ₹{remaining.toLocaleString("en-IN")} more for <span className="text-gold">free shipping</span>
+                  </p>
+                ) : (
+                  <p className="font-sans text-[10px] tracking-wider text-gold mb-2 uppercase">You&apos;ve unlocked free shipping!</p>
+                )}
+                <div className="w-full h-1 bg-ivory/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gold transition-all duration-500 rounded-full" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            );
+          })()}
           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
             {items.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center">
                 <ShoppingBag className="w-10 h-10 text-gold/15 mb-4" />
-                <p className="font-display text-xl text-ivory/30 italic">Your cart is empty</p>
+                <p className="font-display text-xl text-ivory/50 italic">Your cart is empty</p>
                 <p className="font-sans text-[10px] text-ivory/20 tracking-widest mt-2 uppercase">Discover our collection</p>
               </div>
             ) : items.map(item => (
@@ -827,9 +918,9 @@ const CartDrawer = () => {
                   <h3 className="font-display text-lg text-ivory italic truncate">{item.product.name}</h3>
                   <p className="font-sans text-[10px] text-gold/60 tracking-widest mt-0.5 uppercase">{item.product.category}</p>
                   <div className="flex items-center gap-3 mt-3">
-                    <button onClick={() => updateQuantity(item.product.id, -1)} className="w-7 h-7 border border-ivory/10 flex items-center justify-center text-ivory/40 hover:border-gold hover:text-gold transition-colors interactive cursor-pointer"><Minus className="w-3 h-3" /></button>
+                    <button onClick={() => updateQuantity(item.product.id, -1)} className="w-7 h-7 border border-ivory/10 flex items-center justify-center text-ivory/60 hover:border-gold hover:text-gold transition-colors interactive cursor-pointer"><Minus className="w-3 h-3" /></button>
                     <span className="font-body text-sm text-ivory w-4 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.product.id, 1)} className="w-7 h-7 border border-ivory/10 flex items-center justify-center text-ivory/40 hover:border-gold hover:text-gold transition-colors interactive cursor-pointer"><Plus className="w-3 h-3" /></button>
+                    <button onClick={() => updateQuantity(item.product.id, 1)} className="w-7 h-7 border border-ivory/10 flex items-center justify-center text-ivory/60 hover:border-gold hover:text-gold transition-colors interactive cursor-pointer"><Plus className="w-3 h-3" /></button>
                   </div>
                   <p className="font-body text-sm text-gold mt-2">₹{(item.product.price * item.quantity).toLocaleString("en-IN")}</p>
                 </div>
@@ -840,7 +931,7 @@ const CartDrawer = () => {
           {items.length > 0 && (
             <div className="p-6 md:p-8 border-t border-gold/8 space-y-4">
               <div className="flex justify-between items-baseline">
-                <span className="font-sans text-[11px] tracking-widest text-ivory/40 uppercase">Total</span>
+                <span className="font-sans text-[11px] tracking-widest text-ivory/60 uppercase">Total</span>
                 <span className="font-display text-3xl text-gold italic">₹{total.toLocaleString("en-IN")}</span>
               </div>
               <button className="w-full py-4 bg-gold text-noir font-sans text-[11px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors interactive cursor-pointer">Checkout</button>
@@ -872,7 +963,7 @@ const ProductRitual = ({ product, onClose }: { product: Product; onClose: () => 
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 animate-[fadeIn_0.4s_ease-out]" role="dialog" aria-modal="true" aria-label={`${product.name} details`}>
       <div className="absolute inset-0 bg-void/92 backdrop-blur-md" onClick={onClose} />
       <div className="relative w-full max-w-5xl max-h-[92vh] grid grid-cols-1 md:grid-cols-2 bg-noir border border-gold/10 overflow-hidden animate-[scaleReveal_0.5s_cubic-bezier(0.19,1,0.22,1)]">
-        <button onClick={onClose} className="absolute top-4 right-4 z-20 text-ivory/40 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
+        <button onClick={onClose} className="absolute top-4 right-4 z-20 text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
         <div ref={imgRef} className="relative w-full h-[50vh] md:h-auto md:min-h-[440px] overflow-hidden bg-noir flex items-center justify-center"
           onMouseMove={e => { if (imgRef.current) { const r = imgRef.current.getBoundingClientRect(); setMouse({ x: e.clientX - r.left, y: e.clientY - r.top }); } }}>
           <img src={product.image} alt={product.name}
@@ -888,18 +979,26 @@ const ProductRitual = ({ product, onClose }: { product: Product; onClose: () => 
           <p className="font-body text-ivory/70 text-base leading-[1.75] mb-8 max-w-md">{product.desc}</p>
           <div className="grid grid-cols-2 gap-2.5 mb-8">
             {["Handcrafted", "Premium Resin", "Gold Detailing", "Gift Ready"].map(f => (
-              <div key={f} className="flex items-center gap-2 text-ivory/50">
+              <div key={f} className="flex items-center gap-2 text-ivory/70">
                 <div className="w-1 h-1 bg-gold/60 rounded-full shrink-0" />
                 <span className="font-sans text-[10px] tracking-wider uppercase">{f}</span>
               </div>
             ))}
           </div>
-          <div className="mt-auto flex items-center justify-between gap-4 pt-6 border-t border-gold/10">
-            <span className="font-display text-3xl text-gold italic">₹{product.price.toLocaleString("en-IN")}</span>
-            <MagneticButton className="bg-gold text-noir px-7 py-3 font-sans text-[10px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors"
-              onClick={() => { addItem(product); addToast(`${product.name} added to cart`); }}>
-              Add to Cart
-            </MagneticButton>
+          <div className="mt-auto pt-6 border-t border-gold/10 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <span className="font-display text-3xl text-gold italic">₹{product.price.toLocaleString("en-IN")}</span>
+              <MagneticButton className="bg-gold text-noir px-7 py-3 font-sans text-[10px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors"
+                onClick={() => { addItem(product); addToast(`${product.name} added to cart`); }}>
+                Add to Cart
+              </MagneticButton>
+            </div>
+            <a href={`https://wa.me/919819998988?text=Hi! I'm interested in ${encodeURIComponent(product.name)} (₹${product.price.toLocaleString("en-IN")})`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 border border-gold/30 px-6 py-3 font-sans text-[10px] tracking-[0.2em] uppercase text-ivory/70 hover:text-gold hover:border-gold/60 transition-all interactive cursor-pointer">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Enquire on WhatsApp
+            </a>
           </div>
         </div>
       </div>
@@ -917,6 +1016,7 @@ const HorizontalGallery = ({ products, onSelect }: { products: Product[]; onSele
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const isTouch = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlist();
 
   useEffect(() => {
     // On touch devices, skip GSAP pin — native CSS scroll handles it
@@ -966,7 +1066,12 @@ const HorizontalGallery = ({ products, onSelect }: { products: Product[]; onSele
         <img src={p.image} alt={p.name} loading="lazy"
           className="w-full h-full object-cover object-top scale-[1.08] group-hover:scale-[1.14] transition-transform duration-[1400ms] ease-[cubic-bezier(0.19,1,0.22,1)]" />
         <div className="absolute inset-0 bg-gradient-to-t from-noir/85 via-noir/10 to-transparent" />
-        <span className="absolute top-4 right-4 font-sans text-[10px] text-ivory/25 tracking-widest tabular-nums">
+        <button onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}
+          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center glass-card opacity-0 group-hover:opacity-100 transition-opacity duration-300 interactive cursor-pointer"
+          aria-label={inWishlist(p.id) ? "Remove from wishlist" : "Add to wishlist"}>
+          <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(p.id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
+        </button>
+        <span className="absolute top-4 left-4 font-sans text-[10px] text-ivory/25 tracking-widest tabular-nums">
           {String(i + 1).padStart(2, "0")}
         </span>
       </div>
@@ -1016,7 +1121,7 @@ const HorizontalGallery = ({ products, onSelect }: { products: Product[]; onSele
             <div className="shrink-0 flex items-center justify-center px-16" style={{ height: "clamp(340px, 55vh, 620px)" }}>
               <div className="text-center">
                 <div className="w-16 h-px bg-gold/30 mx-auto mb-6" />
-                <p className="font-display text-2xl text-ivory/40 italic mb-2">That&apos;s all</p>
+                <p className="font-display text-2xl text-ivory/60 italic mb-2">That&apos;s all</p>
                 <p className="font-sans text-[10px] text-ivory/20 tracking-widest uppercase">for now</p>
               </div>
             </div>
@@ -1060,12 +1165,12 @@ const TestimonialsSection = () => {
           <blockquote className="font-display text-2xl md:text-3xl lg:text-4xl text-ivory italic leading-[1.35] mb-10 max-w-3xl mx-auto">&ldquo;{t.text}&rdquo;</blockquote>
           <cite className="not-italic block">
             <div className="font-sans text-[11px] tracking-[0.25em] text-gold uppercase">{t.name}</div>
-            <div className="font-body text-sm text-ivory/40 mt-1.5">{t.location} — {t.product}</div>
+            <div className="font-body text-sm text-ivory/60 mt-1.5">{t.location} — {t.product}</div>
           </cite>
         </div>
         <div className="flex justify-center items-center gap-6 mt-14">
           <button onClick={() => setActive(p => (p - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
-            className="w-11 h-11 border border-gold/20 rounded-full flex items-center justify-center text-ivory/40 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Previous"><ChevronLeft className="w-4 h-4" /></button>
+            className="w-11 h-11 border border-gold/20 rounded-full flex items-center justify-center text-ivory/60 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Previous"><ChevronLeft className="w-4 h-4" /></button>
           <div className="flex gap-2" role="tablist" aria-label="Testimonial navigation">
             {TESTIMONIALS.map((_, i) => (
               <button key={i} onClick={() => setActive(i)} role="tab" aria-selected={i === active} aria-label={`Testimonial ${i + 1}`}
@@ -1073,7 +1178,7 @@ const TestimonialsSection = () => {
             ))}
           </div>
           <button onClick={() => setActive(p => (p + 1) % TESTIMONIALS.length)}
-            className="w-11 h-11 border border-gold/20 rounded-full flex items-center justify-center text-ivory/40 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Next"><ChevronRight className="w-4 h-4" /></button>
+            className="w-11 h-11 border border-gold/20 rounded-full flex items-center justify-center text-ivory/60 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Next"><ChevronRight className="w-4 h-4" /></button>
         </div>
       </div>
     </section>
@@ -1208,11 +1313,17 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
   const heroCTARef = useRef<HTMLDivElement>(null);
   const heroLabelRef = useRef<HTMLParagraphElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlist();
 
   // GSAP hero entrance + scroll-driven fade
   useEffect(() => {
     // Entrance timeline
     const entranceCtx = gsap.context(() => {
+      gsap.set(heroLabelRef.current, { opacity: 0, y: 16 });
+      gsap.set(line1Ref.current, { clipPath: "inset(0 0 100% 0)", y: 20 });
+      gsap.set(line2Ref.current, { clipPath: "inset(0 0 100% 0)", y: 20 });
+      gsap.set(heroSubRef.current, { opacity: 0, y: 22 });
+      gsap.set(heroCTARef.current, { opacity: 0, y: 18 });
       const tl = gsap.timeline({ delay: 0.15 });
       tl.fromTo(heroLabelRef.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" })
         .fromTo(line1Ref.current, { clipPath: "inset(0 0 100% 0)", y: 20 }, { clipPath: "inset(0 0 0% 0)", y: 0, duration: 1.0, ease: "power4.out" }, "-=0.2")
@@ -1302,7 +1413,7 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
 
           {/* Typography — full width, left-aligned */}
           <div ref={heroTextRef} className="max-w-3xl">
-            <p ref={heroLabelRef} style={{ opacity: 0 }}
+            <p ref={heroLabelRef}
               className="gold-shimmer-label font-sans text-[11px] tracking-[0.55em] uppercase mb-9">
               Handcrafted with Devotion
             </p>
@@ -1319,20 +1430,20 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
                 style={{ fontSize: "clamp(56px, 10.5vw, 148px)", transition: "transform 0.12s linear" } as React.CSSProperties} />
             </div>
 
-            <div ref={heroSubRef} style={{ opacity: 0 }} className="mt-6 md:mt-9 max-w-[480px]">
+            <div ref={heroSubRef} className="mt-6 md:mt-9 max-w-[480px]">
               <div className="w-10 h-px bg-gold/50 mb-5 md:mb-7" />
-              <p className="font-body font-light text-ivory/72 text-[17px] md:text-[18px] leading-[1.75]">
+              <p className="font-body font-light text-ivory/85 text-[17px] md:text-[18px] leading-[1.75]">
                 Where tradition meets artistry — handcrafted Indian art for your sacred spaces. Each piece tells a story of devotion.
               </p>
             </div>
 
-            <div ref={heroCTARef} style={{ opacity: 0 }} className="mt-7 md:mt-10 flex flex-wrap items-center gap-4">
+            <div ref={heroCTARef} className="mt-7 md:mt-10 flex flex-wrap items-center gap-4">
               <MagneticButton onClick={() => navigate("COLLECTION")}
                 className="inline-flex items-center gap-3 bg-gold text-noir px-10 py-4 font-sans text-[11px] tracking-[0.22em] uppercase hover:bg-gold-light transition-colors">
                 Explore Collection <ArrowRight className="w-3.5 h-3.5" />
               </MagneticButton>
               <MagneticButton onClick={() => navigate("MANIFESTO")}
-                className="inline-flex items-center gap-3 border border-gold/30 text-ivory/65 px-8 py-4 font-sans text-[11px] tracking-[0.22em] uppercase hover:border-gold/55 hover:text-gold transition-all">
+                className="inline-flex items-center gap-3 border border-gold/30 text-ivory/85 px-8 py-4 font-sans text-[11px] tracking-[0.22em] uppercase hover:border-gold/55 hover:text-gold transition-all">
                 Our Story
               </MagneticButton>
               {/* Social proof strip */}
@@ -1347,7 +1458,7 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
                 <div className="flex items-center gap-1.5">
                   {[1,2,3,4,5].map(s => <Star key={s} className="w-2.5 h-2.5 text-gold fill-gold" aria-hidden="true" />)}
                 </div>
-                <span className="font-sans text-[10px] text-ivory/35 tracking-[0.15em] uppercase">Loved by 5,000+ homes</span>
+                <span className="font-sans text-[10px] text-ivory/55 tracking-[0.15em] uppercase">Loved by 5,000+ homes</span>
               </div>
             </div>
           </div>
@@ -1362,6 +1473,28 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
 
       {/* ===== MARQUEE ===== */}
       <Marquee text="Shubh Labh  &bull;  Torans  &bull;  Resin Idols  &bull;  Wall Art  &bull;  Handcrafted in India  &bull;  " />
+
+      {/* ===== TRUST BADGES ===== */}
+      <section className="py-10 md:py-12 px-6 md:px-14 border-y border-gold/8" aria-label="Trust indicators">
+        <div className="max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+          {[
+            { Icon: Truck, label: "Free Shipping", sub: "Orders above ₹1999" },
+            { Icon: Award, label: "Handmade in India", sub: "By master artisans" },
+            { Icon: RotateCcw, label: "Easy Returns", sub: "7-day hassle-free" },
+            { Icon: ShieldCheck, label: "Secure Payment", sub: "100% safe checkout" },
+          ].map(({ Icon, label, sub }) => (
+            <div key={label} className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 border border-gold/20 rounded-full flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-gold" />
+              </div>
+              <div>
+                <p className="font-sans text-[11px] tracking-[0.15em] text-ivory/90 uppercase font-medium">{label}</p>
+                <p className="font-body text-xs text-ivory/55 mt-0.5">{sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* ===== PHILOSOPHY — Full-bleed quote ===== */}
       <section className="relative bg-void overflow-hidden">
@@ -1382,7 +1515,7 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           </p>
           <Reveal y={15} delay={0.5} className="mt-12 flex items-center gap-6">
             <div className="w-10 h-px bg-gold/35" />
-            <p className="font-sans text-[11px] tracking-[0.35em] text-ivory/35 uppercase">Aaryelle Atelier — Est. 2025</p>
+            <p className="font-sans text-[11px] tracking-[0.35em] text-ivory/55 uppercase">Aaryelle Atelier — Est. 2025</p>
           </Reveal>
         </div>
         {/* Full-bleed bottom image strip */}
@@ -1413,7 +1546,7 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
             </div>
             <Reveal y={20} delay={0.2}>
               <MagneticButton onClick={() => navigate("COLLECTION")}
-                className="self-start md:self-auto flex items-center gap-2 font-sans text-[11px] tracking-[0.2em] text-ivory/45 hover:text-gold transition-colors uppercase">
+                className="self-start md:self-auto flex items-center gap-2 font-sans text-[11px] tracking-[0.2em] text-ivory/65 hover:text-gold transition-colors uppercase">
                 View All <ArrowRight className="w-3.5 h-3.5" />
               </MagneticButton>
             </Reveal>
@@ -1423,16 +1556,21 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 mb-8">
             <ClipReveal direction="right" className="md:col-span-7" duration={1.5}>
               <TiltCard intensity={3}>
-                <article onClick={() => onSelectProduct(PRODUCTS[0])} className="group cursor-pointer interactive" data-cursor="VIEW">
+                <article onClick={() => onSelectProduct(PRODUCTS[0])} className="group cursor-pointer interactive relative" data-cursor="VIEW">
                   <div className="relative aspect-[4/5] md:h-[700px] overflow-hidden bento-card">
                     <ImageParallax src={PRODUCTS[0].image} alt={PRODUCTS[0].name} className="w-full h-full" intensity={10} />
                     <div className="absolute inset-0 bg-gradient-to-t from-noir/80 via-noir/15 to-transparent" />
+                    <button onClick={e => { e.stopPropagation(); toggleWishlist(PRODUCTS[0].id); }}
+                      className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center glass-card opacity-0 group-hover:opacity-100 transition-opacity duration-300 interactive cursor-pointer"
+                      aria-label={inWishlist(PRODUCTS[0].id) ? "Remove from wishlist" : "Add to wishlist"}>
+                      <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(PRODUCTS[0].id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
+                    </button>
                     <div className="absolute bottom-0 left-0 right-0 p-7 md:p-10">
                       <p className="font-sans text-[10px] tracking-widest text-gold uppercase mb-2.5">{PRODUCTS[0].category}</p>
                       <h3 className="font-display text-3xl md:text-4xl text-ivory italic mb-3 leading-tight">{PRODUCTS[0].name}</h3>
                       <div className="flex items-center justify-between">
                         <span className="font-body text-lg text-gold">₹{PRODUCTS[0].price.toLocaleString("en-IN")}</span>
-                        <span className="font-sans text-[10px] tracking-widest text-ivory/45 uppercase group-hover:text-gold transition-colors flex items-center gap-2">
+                        <span className="font-sans text-[10px] tracking-widest text-ivory/65 uppercase group-hover:text-gold transition-colors flex items-center gap-2">
                           View Details <ArrowRight className="w-3 h-3" />
                         </span>
                       </div>
@@ -1446,10 +1584,15 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
               {PRODUCTS.slice(2, 4).map((p, i) => (
                 <ClipReveal key={p.id} direction="left" delay={0.12 + i * 0.18} className="flex-1">
                   <TiltCard intensity={4}>
-                    <article onClick={() => onSelectProduct(p)} className="group cursor-pointer interactive h-full" data-cursor="VIEW">
+                    <article onClick={() => onSelectProduct(p)} className="group cursor-pointer interactive h-full relative" data-cursor="VIEW">
                       <div className="relative aspect-[4/5] md:h-[334px] overflow-hidden bento-card">
                         <ImageParallax src={p.image} alt={p.name} className="w-full h-full" intensity={8} />
                         <div className="absolute inset-0 bg-gradient-to-t from-noir/70 to-transparent" />
+                        <button onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}
+                          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center glass-card opacity-0 group-hover:opacity-100 transition-opacity duration-300 interactive cursor-pointer"
+                          aria-label={inWishlist(p.id) ? "Remove from wishlist" : "Add to wishlist"}>
+                          <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(p.id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
+                        </button>
                         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
                           <p className="font-sans text-[10px] tracking-widest text-gold uppercase mb-1.5">{p.category}</p>
                           <h3 className="font-display text-xl md:text-2xl text-ivory italic">{p.name}</h3>
@@ -1466,11 +1609,16 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           {/* Row of 3 */}
           <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8" staggerDelay={0.1}>
             {PRODUCTS.slice(3, 6).map((p) => (
-              <article key={p.id} onClick={() => onSelectProduct(p)} className="group cursor-pointer interactive" data-cursor="VIEW">
+              <article key={p.id} onClick={() => onSelectProduct(p)} className="group cursor-pointer interactive relative" data-cursor="VIEW">
                 <div className="relative aspect-[3/4] overflow-hidden bento-card mb-4">
                   <img src={p.image} alt={p.name}
                     className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-noir/65 to-transparent" />
+                  <button onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}
+                    className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center glass-card opacity-0 group-hover:opacity-100 transition-opacity duration-300 interactive cursor-pointer"
+                    aria-label={inWishlist(p.id) ? "Remove from wishlist" : "Add to wishlist"}>
+                    <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(p.id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
+                  </button>
                   <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-1 group-hover:translate-y-0 transition-transform duration-400">
                     <span className="font-sans text-[9px] tracking-widest text-gold uppercase block mb-1">{p.category}</span>
                     <h3 className="font-display text-xl text-ivory italic">{p.name}</h3>
@@ -1500,9 +1648,9 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           <StaggerReveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-gold/8" staggerDelay={0.1}>
             {PROCESS_STEPS.map((item) => (
               <div key={item.step} className="bg-noir p-8 md:p-10 group hover:bg-warm/25 transition-colors duration-500">
-                <span className="font-display text-5xl text-gold/18 italic block mb-6 group-hover:text-gold/35 transition-colors duration-500">{item.step}</span>
-                <h4 className="font-display text-xl text-ivory italic mb-3">{item.title}</h4>
-                <p className="font-body text-sm text-ivory/55 leading-[1.75]">{item.desc}</p>
+                <span className="font-display text-6xl text-gold/20 italic block mb-6 group-hover:text-gold/40 transition-colors duration-500">{item.step}</span>
+                <h4 className="font-display text-xl text-ivory/90 italic mb-3">{item.title}</h4>
+                <p className="font-body text-sm text-ivory/70 leading-[1.75]">{item.desc}</p>
               </div>
             ))}
           </StaggerReveal>
@@ -1525,10 +1673,10 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           <div className="grid grid-cols-2 md:grid-cols-4 border border-gold/10">
             {STATS.map((stat, i) => (
               <Reveal key={stat.label} y={40} delay={i * 0.1} className="text-center p-6 md:p-16 border-r border-b border-gold/10 [&:nth-child(2n)]:border-r-0 md:[&:nth-child(2n)]:border-r md:[&:nth-child(4n)]:border-r-0 [&:nth-child(n+3)]:border-b-0 md:[&:nth-child(n+3)]:border-b md:[&:nth-child(n+5)]:border-b-0">
-                <div className="font-display text-5xl md:text-7xl text-gold italic mb-3 leading-none">
+                <div className="font-display text-5xl md:text-7xl text-gradient-gold italic mb-3 leading-none">
                   <NumberScramble value={stat.value} suffix={stat.suffix} />
                 </div>
-                <div className="font-sans text-[10px] tracking-[0.25em] text-ivory/50 uppercase mt-2">{stat.label}</div>
+                <div className="font-sans text-[10px] tracking-[0.25em] text-ivory/80 uppercase mt-2">{stat.label}</div>
               </Reveal>
             ))}
           </div>
@@ -1573,7 +1721,7 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
               Explore Collection <ArrowRight className="w-4 h-4" />
             </MagneticButton>
             <MagneticButton onClick={() => navigate("ORACULUM")}
-              className="inline-flex items-center gap-3 border border-gold/30 text-ivory/65 px-10 py-5 font-sans text-[11px] tracking-[0.22em] uppercase hover:border-gold/55 hover:text-gold transition-all">
+              className="inline-flex items-center gap-3 border border-gold/30 text-ivory/85 px-10 py-5 font-sans text-[11px] tracking-[0.22em] uppercase hover:border-gold/55 hover:text-gold transition-all">
               Ask Aaryelle
             </MagneticButton>
           </Reveal>
@@ -1598,6 +1746,7 @@ const CollectionView = ({ onSelectProduct }: { onSelectProduct: (p: Product) => 
   const [filter, setFilter] = useState("All");
   const { addItem } = useCart();
   const { addToast } = useToast();
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlist();
   const categories = ["All", ...Array.from(new Set(PRODUCTS.map(p => p.category)))];
   const filtered = filter === "All" ? PRODUCTS : PRODUCTS.filter(p => p.category === filter);
   return (
@@ -1611,7 +1760,7 @@ const CollectionView = ({ onSelectProduct }: { onSelectProduct: (p: Product) => 
           <div className="flex flex-wrap gap-2.5 mb-14">
             {categories.map(cat => (
               <button key={cat} onClick={() => setFilter(cat)}
-                className={`px-5 py-2.5 font-sans text-[11px] tracking-[0.15em] uppercase border transition-all duration-300 interactive cursor-pointer ${filter === cat ? "bg-gold text-noir border-gold" : "border-ivory/10 text-ivory/45 hover:border-gold/40 hover:text-gold"}`}>
+                className={`px-5 py-2.5 font-sans text-[11px] tracking-[0.15em] uppercase border transition-all duration-300 interactive cursor-pointer ${filter === cat ? "bg-gold text-noir border-gold" : "border-ivory/10 text-ivory/65 hover:border-gold/40 hover:text-gold"}`}>
                 {cat}
               </button>
             ))}
@@ -1626,6 +1775,11 @@ const CollectionView = ({ onSelectProduct }: { onSelectProduct: (p: Product) => 
                     <img src={p.image} alt={p.name}
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-noir/55 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <button onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}
+                      className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center glass-card opacity-0 group-hover:opacity-100 transition-opacity duration-300 interactive cursor-pointer"
+                      aria-label={inWishlist(p.id) ? "Remove from wishlist" : "Add to wishlist"}>
+                      <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(p.id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
+                    </button>
                     <div className="absolute bottom-0 left-0 right-0 p-5 flex gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]">
                       <button onClick={e => { e.stopPropagation(); onSelectProduct(p); }}
                         className="flex-1 py-2.5 glass-card text-center font-sans text-[10px] tracking-widest text-ivory uppercase hover:text-gold transition-colors cursor-pointer">
@@ -1641,7 +1795,7 @@ const CollectionView = ({ onSelectProduct }: { onSelectProduct: (p: Product) => 
                 <div className="flex justify-between items-start gap-3">
                   <div>
                     <h3 className="font-display text-xl text-ivory group-hover:text-gold transition-colors italic">{p.name}</h3>
-                    <p className="font-sans text-[10px] text-ivory/35 tracking-widest mt-0.5 uppercase">{p.category}</p>
+                    <p className="font-sans text-[10px] text-ivory/55 tracking-widest mt-0.5 uppercase">{p.category}</p>
                   </div>
                   <span className="font-body text-sm text-gold shrink-0 mt-1">₹{p.price.toLocaleString("en-IN")}</span>
                 </div>
@@ -1650,7 +1804,7 @@ const CollectionView = ({ onSelectProduct }: { onSelectProduct: (p: Product) => 
           ))}
           {filtered.length === 0 && (
             <div className="col-span-full text-center py-24">
-              <p className="font-display text-2xl text-ivory/30 italic">No products in this category yet.</p>
+              <p className="font-display text-2xl text-ivory/50 italic">No products in this category yet.</p>
             </div>
           )}
         </div>
@@ -1678,7 +1832,7 @@ const ManifestoView = () => (
         </h1>
       </div>
       {/* Scroll hint */}
-      <div className="absolute bottom-8 right-8 md:right-14 font-sans text-[9px] text-ivory/30 tracking-[0.4em] uppercase animate-[fadeIn_1s_1s_both]">
+      <div className="absolute bottom-8 right-8 md:right-14 font-sans text-[9px] text-ivory/50 tracking-[0.4em] uppercase animate-[fadeIn_1s_1s_both]">
         Scroll to explore ↓
       </div>
     </div>
@@ -1695,10 +1849,10 @@ const ManifestoView = () => (
             Every home deserves a touch of the divine, handcrafted with love and devotion.
           </p>
           <div className="w-14 h-px bg-gold/40 mb-8" />
-          <p className="font-body text-ivory/65 text-[17px] leading-[1.75] mb-6">
+          <p className="font-body text-ivory/85 text-[17px] leading-[1.75] mb-6">
             We honour ancient Indian traditions through modern artistry and timeless design. Each piece carries the blessings of skilled artisan hands from across India.
           </p>
-          <p className="font-body text-ivory/65 text-[17px] leading-[1.75]">
+          <p className="font-body text-ivory/85 text-[17px] leading-[1.75]">
             From our workshop to your mandir, your walls, your doorstep — with love.
           </p>
         </Reveal>
@@ -1710,9 +1864,9 @@ const ManifestoView = () => (
         {PROCESS_STEPS.map((item, i) => (
           <Reveal key={item.step} y={40} delay={i * 0.1}>
             <div className="bg-noir p-8 md:p-10 hover:bg-warm/20 transition-colors duration-500">
-              <span className="font-display text-4xl text-gold/18 italic block mb-4">{item.step}</span>
-              <h4 className="font-display text-xl text-ivory italic mb-3">{item.title}</h4>
-              <p className="font-body text-sm text-ivory/55 leading-[1.75]">{item.desc}</p>
+              <span className="font-display text-6xl text-gold/20 italic block mb-4">{item.step}</span>
+              <h4 className="font-display text-xl text-ivory/90 italic mb-3">{item.title}</h4>
+              <p className="font-body text-sm text-ivory/70 leading-[1.75]">{item.desc}</p>
             </div>
           </Reveal>
         ))}
@@ -1763,7 +1917,7 @@ const OraculumView = ({ onClose }: { onClose: () => void }) => {
         <Emblem className="h-20 w-auto mb-10 opacity-90" />
         {!response && !isThinking && (
           <div className="text-center w-full animate-[fadeInUp_0.6s_ease-out]">
-            <h2 className="font-display text-xl md:text-2xl text-ivory/40 italic mb-8">How can we help you today?</h2>
+            <h2 className="font-display text-xl md:text-2xl text-ivory/60 italic mb-8">How can we help you today?</h2>
             <div className="relative">
               <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && askOracle()}
                 placeholder="Ask Aaryelle..."
@@ -1793,8 +1947,54 @@ const OraculumView = ({ onClose }: { onClose: () => void }) => {
           </div>
         )}
       </div>
-      <button onClick={onClose} className="absolute top-5 right-6 text-ivory/30 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
+      <button onClick={onClose} className="absolute top-5 right-6 text-ivory/50 hover:text-gold transition-colors interactive cursor-pointer"><X className="w-5 h-5" /></button>
     </div>
+  );
+};
+
+// ============================================================
+// NEWSLETTER SECTION
+// ============================================================
+
+const NewsletterSection = () => {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const { addToast } = useToast();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes("@")) { addToast("Please enter a valid email"); return; }
+    setSubmitted(true);
+    addToast("Welcome to Aaryelle! Check your inbox.");
+  };
+  return (
+    <section className="py-24 md:py-32 px-6 md:px-14 bg-warm relative overflow-hidden" aria-label="Newsletter signup">
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <MandalaSVG size={500} opacity={0.08} className="absolute -right-20 top-1/2 -translate-y-1/2" />
+      </div>
+      <div className="max-w-2xl mx-auto text-center relative z-10">
+        <p className="gold-shimmer-label font-sans text-[11px] tracking-[0.5em] uppercase mb-5">Stay Connected</p>
+        <h2 className="font-display text-4xl md:text-5xl text-ivory italic mb-4">Sacred Stories, Delivered</h2>
+        <p className="font-body text-ivory/85 text-base leading-relaxed mb-10">
+          Get early access to new arrivals, festive collections, artisan stories, and exclusive offers.
+        </p>
+        {submitted ? (
+          <div className="flex items-center justify-center gap-3 text-gold">
+            <Sparkles className="w-5 h-5" />
+            <span className="font-display text-xl italic">Thank you for joining us!</span>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="Your email address"
+              className="flex-1 bg-noir/60 border border-gold/20 px-5 py-3.5 font-body text-sm text-ivory placeholder:text-ivory/50 outline-none focus:border-gold/50 transition-colors"
+              required />
+            <button type="submit" className="bg-gold text-noir px-7 py-3.5 font-sans text-[11px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors shrink-0 interactive cursor-pointer">
+              Subscribe
+            </button>
+          </form>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -1802,76 +2002,75 @@ const OraculumView = ({ onClose }: { onClose: () => void }) => {
 // FOOTER
 // ============================================================
 
-const Footer = ({ navigate }: { navigate: (v: ViewState) => void }) => {
-  const [email, setEmail] = useState("");
-  const [signed, setSigned] = useState(false);
-  const { addToast } = useToast();
-  const handleSign = (e: React.FormEvent) => {
-    e.preventDefault(); if (!email.trim()) return;
-    setSigned(true); addToast("Welcome to the Aaryelle family!");
-    setTimeout(() => { setSigned(false); setEmail(""); }, 3000);
-  };
-  return (
-    <footer className="bg-void relative z-10 overflow-hidden" role="contentinfo">
-      {/* ── Massive editorial wordmark ── */}
-      <div className="relative overflow-hidden border-t border-gold/8">
-        <ClipReveal direction="up" duration={1.4} className="px-6 md:px-14 pt-20 pb-10">
-          <p className="font-display text-[clamp(56px,10vw,140px)] text-ivory/[0.06] italic tracking-[-0.02em] leading-none select-none" aria-hidden="true">
-            Aaryelle
+const Footer = ({ navigate }: { navigate: (v: ViewState) => void }) => (
+  <footer className="bg-void border-t border-gold/10 px-6 md:px-14 pt-16 pb-8" aria-label="Footer">
+    <div className="max-w-[1440px] mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-14 mb-14">
+        {/* Brand */}
+        <div className="md:col-span-1">
+          <Emblem className="h-14 w-auto mb-4 opacity-85" />
+          <p className="font-body text-ivory/55 text-sm leading-relaxed mb-5">
+            Sacred luxury handcrafted in India. Where devotion meets artistry.
           </p>
-        </ClipReveal>
-      </div>
-
-      {/* ── Main footer content ── */}
-      <div className="max-w-[1440px] mx-auto px-6 md:px-14 pb-12 md:pb-16">
-        {/* Top row: brand + email */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-14 pt-4">
-          <div>
-            <Emblem className="h-16 w-auto mb-5 opacity-80" />
-            <p className="font-body text-ivory/40 text-sm leading-[1.75] max-w-xs">
-              Sacred craft for sacred spaces — every piece a prayer made visible.
-            </p>
-          </div>
-          <div className="md:text-right flex flex-col md:items-end justify-center">
-            <p className="font-sans text-[11px] tracking-[0.3em] text-gold mb-5 uppercase">Stay Connected</p>
-            {!signed ? (
-              <form onSubmit={handleSign} className="relative w-full max-w-xs">
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email" required
-                  className="w-full bg-transparent border-b border-gold/15 py-2 font-body text-sm text-ivory placeholder-ivory/20 focus:outline-none focus:border-gold/45 transition-colors interactive" />
-                <button type="submit" className="absolute right-0 top-2 text-gold/35 hover:text-gold interactive cursor-pointer transition-colors"><ArrowRight className="w-4 h-4" /></button>
-              </form>
-            ) : <div className="font-sans text-gold/55 text-[11px] tracking-[0.2em] uppercase">Welcome to the family</div>}
-          </div>
-        </div>
-
-        <Divider />
-
-        {/* Bottom row: links + copyright */}
-        <div className="mt-7 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-wrap gap-7">
-            {([["Collection", "COLLECTION"], ["Our Story", "MANIFESTO"], ["Ask Aaryelle", "ORACULUM"]] as [string, ViewState][]).map(([label, v]) => (
-              <button key={label} onClick={() => navigate(v)}
-                className="magnetic-link font-sans text-[10px] text-ivory/30 hover:text-gold transition-colors interactive cursor-pointer tracking-widest uppercase">{label}</button>
-            ))}
-          </div>
-          <div className="flex items-center gap-7">
-            <a href="#" aria-label="Instagram" className="text-ivory/20 hover:text-gold transition-colors interactive cursor-pointer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4" aria-hidden="true">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg>
+          <div className="flex gap-3">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 border border-gold/20 flex items-center justify-center text-ivory/60 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Instagram">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
             </a>
-            {["Privacy", "Terms"].map(l => (
-              <a key={l} href="#" className="magnetic-link font-sans text-[10px] text-ivory/20 hover:text-gold transition-colors interactive cursor-pointer tracking-widest uppercase">{l}</a>
-            ))}
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 border border-gold/20 flex items-center justify-center text-ivory/60 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="Facebook">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </a>
+            <a href="https://wa.me/919819998988" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 border border-gold/20 flex items-center justify-center text-ivory/60 hover:text-gold hover:border-gold/50 transition-all interactive cursor-pointer" aria-label="WhatsApp">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </a>
           </div>
         </div>
-        <p className="font-body text-[11px] text-ivory/15 mt-6 text-center md:text-left">
-          &copy; 2025 Aaryelle · Handcrafted in India with devotion
-        </p>
+        {/* Navigation */}
+        <div>
+          <p className="font-sans text-[10px] tracking-[0.3em] text-gold uppercase mb-5">Navigate</p>
+          <ul className="space-y-3">
+            {(["HOME","COLLECTION","ORACULUM","MANIFESTO"] as ViewState[]).map((v, i) => (
+              <li key={v}><button onClick={() => navigate(v)}
+                className="font-body text-sm text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer">
+                {["Home","Collection","Ask Aaryelle","Our Story"][i]}
+              </button></li>
+            ))}
+          </ul>
+        </div>
+        {/* Categories */}
+        <div>
+          <p className="font-sans text-[10px] tracking-[0.3em] text-gold uppercase mb-5">Categories</p>
+          <ul className="space-y-3">
+            {["Religious Idols","Festive Decor","Torans","Interior Art","Resin Art","Gift Sets"].map(c => (
+              <li key={c}><span className="font-body text-sm text-ivory/60 cursor-default">{c}</span></li>
+            ))}
+          </ul>
+        </div>
+        {/* Contact */}
+        <div>
+          <p className="font-sans text-[10px] tracking-[0.3em] text-gold uppercase mb-5">Contact</p>
+          <div className="space-y-3">
+            <a href="https://wa.me/919819998988" className="flex items-center gap-2 text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer">
+              <span className="font-body text-sm">+91 98199 98988</span>
+            </a>
+            <p className="font-body text-sm text-ivory/55">Mumbai, Maharashtra, India</p>
+            <p className="font-body text-sm text-ivory/55">Mon–Sat: 10am – 7pm IST</p>
+          </div>
+        </div>
       </div>
-    </footer>
-  );
-};
+      <div className="border-t border-gold/8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="font-body text-xs text-ivory/50">© 2025 Aaryelle. All rights reserved. Handcrafted with devotion in India.</p>
+        <div className="flex gap-6">
+          {["Privacy Policy","Terms of Service","Shipping Policy"].map(l => (
+            <span key={l} className="font-sans text-[10px] text-ivory/50 tracking-wider cursor-default hover:text-ivory/70 transition-colors">{l}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  </footer>
+);
 
 // ============================================================
 // LOADING SCREEN
@@ -1954,7 +2153,7 @@ class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError:
       <div className="min-h-screen bg-noir flex flex-col items-center justify-center p-8 text-center">
         <Emblem className="h-16 w-auto mb-8 opacity-60" />
         <h1 className="font-display text-3xl text-ivory italic mb-4">Something went wrong</h1>
-        <p className="font-body text-ivory/40 mb-8 max-w-md text-sm">Please refresh the page to try again.</p>
+        <p className="font-body text-ivory/60 mb-8 max-w-md text-sm">Please refresh the page to try again.</p>
         <button onClick={() => window.location.reload()} className="bg-gold text-noir px-8 py-3 font-sans text-[10px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors cursor-pointer">Refresh Page</button>
       </div>
     );
@@ -2024,6 +2223,7 @@ const App = () => {
   const [pendingView, setPendingView] = useState<ViewState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const audio = useAudioEngine();
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -2122,15 +2322,17 @@ const App = () => {
         <div className="fixed inset-0 bg-noir -z-20" aria-hidden="true" />
         <div className="emerald-mesh" aria-hidden="true" />
         <GoldDust analyserRef={audio.analyserRef} />
-        <Navigation view={view} navigate={handleNavigate} audioEnabled={audio.audioEnabled} toggleAudio={audio.toggleAudio} />
+        <Navigation view={view} navigate={handleNavigate} audioEnabled={audio.audioEnabled} toggleAudio={audio.toggleAudio} onSearchOpen={() => setSearchOpen(true)} />
         <main id="main-content" tabIndex={-1}>
           {view === "HOME" && <HomeView navigate={handleNavigate} onSelectProduct={handleProductSelect} />}
           {view === "COLLECTION" && <CollectionView onSelectProduct={handleProductSelect} />}
           {view === "ORACULUM" && <OraculumView onClose={() => handleNavigate("HOME")} />}
           {view === "MANIFESTO" && <ManifestoView />}
         </main>
+        {view !== "ORACULUM" && <NewsletterSection />}
         {view !== "ORACULUM" && <Footer navigate={handleNavigate} />}
         {selectedProduct && <ProductRitual product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
+        {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} onSelectProduct={(p) => { handleProductSelect(p); setSearchOpen(false); }} />}
       </div>
     </>
   );
@@ -2144,7 +2346,9 @@ createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <ToastProvider>
       <CartProvider>
-        <App />
+        <WishlistProvider>
+          <App />
+        </WishlistProvider>
       </CartProvider>
     </ToastProvider>
   </ErrorBoundary>
