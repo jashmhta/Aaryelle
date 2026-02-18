@@ -1391,10 +1391,15 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
       {/* ===== HERO ===== */}
       <section ref={heroRef} className="relative min-h-screen flex items-center bg-noir overflow-hidden">
         {/* Full-screen background video */}
+        {/* Hero fallback image (visible until video plays) */}
+        <img src="/assets/product2_ganesha_idol.jpg" alt="" aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ opacity: videoPlaying ? 0 : 0.65, transition: "opacity 1.8s ease" }} />
         <video
           className="absolute inset-0 w-full h-full object-cover"
           style={{ opacity: videoPlaying ? 0.72 : 0, transition: "opacity 1.8s ease", willChange: "transform" }}
           autoPlay muted loop playsInline preload="auto"
+          poster="/assets/product2_ganesha_idol.jpg"
           aria-hidden="true"
           onPlaying={() => setVideoPlaying(true)}
           onCanPlay={(e) => { (e.target as HTMLVideoElement).play().catch(() => {}); }}
