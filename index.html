@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Aaryelle — Exquisite handcrafted Indian art & craft. Sacred sculptures, religious idols, resin art, torans, and festive decor for your home." />
+    <meta name="theme-color" content="#0a0a08" />
+
+    <meta property="og:title" content="AARYELLE | Sacred Craft — Handcrafted Indian Art" />
+    <meta property="og:description" content="Where devotion meets artistry. Handcrafted Indian art for your sacred spaces." />
+    <meta property="og:type" content="website" />
+
+    <title>AARYELLE | Sacred Craft — Handcrafted Indian Art</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Josefin+Sans:wght@200;300;400;500;600;700&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              noir: '#0b1a10',
+              void: '#07100a',
+              warm: '#132318',
+              gold: '#c9a96e',
+              'gold-light': '#dcc397',
+              'gold-pale': '#e8d9b8',
+              cream: '#f5f0e8',
+              ivory: '#eae5dc',
+              pearl: '#d4cfc6',
+              ash: '#8a857c',
+              emerald: '#1a4a2e',
+            },
+            fontFamily: {
+              display: ['Cormorant Garamond', 'serif'],
+              sans: ['Josefin Sans', 'sans-serif'],
+              body: ['Jost', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+
+    <style>
+      :root {
+        --color-noir: #0b1a10;
+        --color-void: #07100a;
+        --color-warm: #132318;
+        --color-gold: #c9a96e;
+        --color-gold-light: #dcc397;
+        --color-cream: #f5f0e8;
+        --color-ivory: #eae5dc;
+        --color-emerald: #1a4a2e;
+        --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+        --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+      }
+
+      body {
+        font-family: 'Jost', sans-serif;
+        background-color: var(--color-noir);
+        color: var(--color-ivory);
+        cursor: none;
+        overflow-x: hidden;
+        margin: 0; padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      @media (pointer: coarse) {
+        body { cursor: auto; }
+      }
+
+      .font-display { font-family: 'Cormorant Garamond', serif; }
+      .font-sans    { font-family: 'Josefin Sans', sans-serif; }
+
+      /* ===== Grain Texture ===== */
+      .bg-noise {
+        position: fixed; inset: 0;
+        pointer-events: none; z-index: 9998; opacity: 0.045;
+        background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+      }
+
+      /* ===== Custom Cursor — GSAP quickTo controls x/y via transform ===== */
+      .cursor-dot {
+        position: fixed; width: 6px; height: 6px; top: 0; left: 0;
+        background: var(--color-gold); border-radius: 50%;
+        pointer-events: none; z-index: 10000;
+        will-change: transform;
+        mix-blend-mode: difference;
+        transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
+      }
+      .cursor-dot.expanded {
+        width: 12px; height: 12px;
+      }
+      .cursor-follower {
+        position: fixed; width: 40px; height: 40px; top: 0; left: 0;
+        border: 1px solid rgba(201,169,110,0.3); border-radius: 50%;
+        pointer-events: none; z-index: 9999;
+        will-change: transform;
+        transition: width 0.4s var(--ease-out-expo),
+                    height 0.4s var(--ease-out-expo),
+                    border-color 0.3s,
+                    background-color 0.3s,
+                    opacity 0.3s;
+      }
+      .cursor-follower.active {
+        background-color: rgba(201,169,110,0.06);
+        width: 72px; height: 72px;
+        border-color: rgba(201,169,110,0.5);
+      }
+      .cursor-follower.text-mode {
+        width: 100px; height: 100px;
+        border-color: rgba(201,169,110,0.3);
+        mix-blend-mode: difference;
+      }
+
+      /* ===== Typography Effects ===== */
+      .text-outline-gold {
+        -webkit-text-stroke: 1.5px rgba(201,169,110,0.4);
+        color: transparent;
+      }
+      .text-clip-image {
+        background-size: cover;
+        background-position: center;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* ===== Split Text System ===== */
+      .split-line {
+        overflow: hidden;
+        display: block;
+      }
+      .split-char {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(110%);
+        transition: opacity 0.5s ease, transform 0.7s var(--ease-out-expo);
+      }
+      .split-char.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .split-word {
+        display: inline-block;
+        overflow: hidden;
+      }
+      .split-word-inner {
+        display: inline-block;
+        transform: translateY(110%);
+        transition: transform 0.8s var(--ease-out-expo);
+      }
+      .split-word-inner.visible {
+        transform: translateY(0);
+      }
+
+      /* ===== 3D Perspective ===== */
+      .perspective-container {
+        perspective: 1200px;
+        perspective-origin: center;
+      }
+      .tilt-card {
+        transform-style: preserve-3d;
+        transition: transform 0.1s ease-out;
+        will-change: transform;
+      }
+      .tilt-card-shine {
+        position: absolute; inset: 0;
+        background: radial-gradient(circle at var(--shine-x, 50%) var(--shine-y, 50%), rgba(201,169,110,0.12), transparent 60%);
+        pointer-events: none;
+        z-index: 5;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .tilt-card:hover .tilt-card-shine {
+        opacity: 1;
+      }
+      .tilt-card-depth {
+        transform: translateZ(30px);
+      }
+
+      /* ===== Horizontal Scroll Section ===== */
+      .horizontal-section {
+        position: relative;
+      }
+      .horizontal-sticky {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+      }
+      .horizontal-track {
+        display: flex;
+        gap: 2rem;
+        will-change: transform;
+        padding: 0 4rem;
+      }
+      .horizontal-card {
+        flex-shrink: 0;
+        width: 380px;
+      }
+      @media (min-width: 768px) {
+        .horizontal-card { width: 450px; }
+      }
+
+      /* ===== Marquee ===== */
+      .marquee-container { display: flex; overflow: hidden; user-select: none; gap: 4rem; }
+      .marquee-content {
+        flex-shrink: 0; display: flex; justify-content: space-around;
+        gap: 4rem; min-width: 100%;
+        animation: marqueeScroll 40s linear infinite;
+      }
+      @keyframes marqueeScroll {
+        from { transform: translateX(0); }
+        to   { transform: translateX(calc(-100% - 4rem)); }
+      }
+
+      /* ===== Shutter Transition ===== */
+      .shutter-panel {
+        position: fixed; left: 0; width: 100%; height: 50vh;
+        background: var(--color-void);
+        z-index: 9000;
+        transition: transform 1s var(--ease-in-out-circ);
+        will-change: transform;
+      }
+      .shutter-top    { top: 0;    transform: translateY(-100%); }
+      .shutter-bottom { bottom: 0; transform: translateY(100%); }
+      .shutter-active .shutter-top    { transform: translateY(0); }
+      .shutter-active .shutter-bottom { transform: translateY(0); }
+
+      /* ===== Fluid Words ===== */
+      .fluid-word {
+        display: inline-block;
+        transition: all 0.4s var(--ease-out-expo);
+        cursor: default;
+      }
+      .fluid-word:hover {
+        font-family: 'Cormorant Garamond', serif;
+        font-style: italic; color: var(--color-gold);
+        transform: translateY(-4px);
+      }
+
+      /* ===== Glass Card ===== */
+      .glass-card {
+        background: rgba(26, 26, 24, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(201, 169, 110, 0.08);
+      }
+
+      /* ===== Glass Nav ===== */
+      .glass-nav {
+        background: rgba(10, 10, 8, 0.7);
+        backdrop-filter: blur(24px) saturate(1.2);
+        -webkit-backdrop-filter: blur(24px) saturate(1.2);
+        border-bottom: 1px solid rgba(201, 169, 110, 0.06);
+      }
+
+      /* ===== Product Ritual Light ===== */
+      .ritual-light {
+        position: absolute; inset: 0;
+        background: radial-gradient(circle 350px at var(--x) var(--y), rgba(201,169,110,0.12), transparent 100%);
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      /* ===== Circular Badge ===== */
+      .circular-badge {
+        animation: spinSlow 25s linear infinite;
+      }
+      @keyframes spinSlow {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+
+      /* ===== Number Scramble ===== */
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ===== Mesh Gradient Layer ===== */
+      .mesh-gradient {
+        position: fixed; inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.35;
+      }
+      .mesh-gradient-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(120px);
+        will-change: transform;
+      }
+
+      /* ===== Parallax Layer ===== */
+      .parallax-element {
+        position: absolute;
+        pointer-events: none;
+        will-change: transform;
+      }
+
+      /* ===== Loading — Cinematic ===== */
+      .loading-screen {
+        position: fixed; inset: 0;
+        z-index: 10002;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: #050504;
+        transition: opacity 0.8s ease-out, visibility 0.8s;
+      }
+      .loading-screen.done {
+        opacity: 0; visibility: hidden; pointer-events: none;
+      }
+      .loading-counter {
+        font-variant-numeric: tabular-nums;
+        font-family: 'Josefin Sans', sans-serif;
+      }
+
+      /* ===== Cursor Label ===== */
+      .cursor-label {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: 'Josefin Sans', sans-serif;
+        font-size: 8px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(201, 169, 110, 0.95);
+        pointer-events: none;
+        transition: opacity 0.18s ease;
+        white-space: nowrap;
+      }
+
+      /* ===== Liquid SVG ===== */
+      .liquid-target:hover { filter: url(#liquid-filter); }
+
+      /* ===== Emerald-Gold Background Mesh ===== */
+      .emerald-mesh {
+        position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      }
+      .emerald-mesh::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse 70% 50% at 20% 30%, rgba(26,74,46,0.28) 0%, transparent 60%),
+                    radial-gradient(ellipse 60% 60% at 80% 70%, rgba(26,74,46,0.18) 0%, transparent 55%),
+                    radial-gradient(ellipse 80% 40% at 50% 90%, rgba(201,169,110,0.06) 0%, transparent 70%);
+      }
+
+      /* ===== Floating Petal Keyframes ===== */
+      @keyframes petalRise {
+        0%   { transform: translateY(0)   translateX(0)   rotate(0deg)   scale(1);   opacity: 0; }
+        8%   { opacity: 0.75; }
+        45%  { transform: translateY(-45vh) translateX(var(--px, 25px)) rotate(140deg) scale(0.9); opacity: 0.45; }
+        90%  { opacity: 0.1; }
+        100% { transform: translateY(-95vh) translateX(var(--px2, 50px)) rotate(280deg) scale(0.6); opacity: 0; }
+      }
+      @keyframes petalSway {
+        0%, 100% { margin-left: 0; }
+        50%       { margin-left: 12px; }
+      }
+      .petal-float {
+        position: absolute; pointer-events: none;
+        border-radius: 50% 0 50% 0;
+        animation: petalRise var(--dur, 12s) var(--del, 0s) ease-in infinite;
+        opacity: 0;
+      }
+
+      /* ===== Mandala Ring ===== */
+      @keyframes mandalaRotate {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+      @keyframes mandalaRotateReverse {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(-360deg); }
+      }
+      .mandala-ring { animation: mandalaRotate var(--speed, 60s) linear infinite; transform-origin: center; }
+      .mandala-ring-rev { animation: mandalaRotateReverse var(--speed, 80s) linear infinite; transform-origin: center; }
+
+      /* ===== Diya Flame ===== */
+      @keyframes flameFlicker {
+        0%, 100% { transform: scaleY(1)   scaleX(1)   rotate(-2deg); opacity: 0.9; }
+        25%       { transform: scaleY(1.12) scaleX(0.9) rotate(2deg);  opacity: 1; }
+        50%       { transform: scaleY(0.92) scaleX(1.1) rotate(-1deg); opacity: 0.85; }
+        75%       { transform: scaleY(1.08) scaleX(0.95) rotate(3deg); opacity: 0.95; }
+      }
+      .diya-flame { animation: flameFlicker 1.4s ease-in-out infinite; transform-origin: bottom center; }
+
+      /* ===== Paisley Border Animation ===== */
+      @keyframes paisleyShimmer {
+        0%, 100% { opacity: 0.12; }
+        50%       { opacity: 0.22; }
+      }
+      .paisley-border { animation: paisleyShimmer 4s ease-in-out infinite; }
+
+      /* ===== Rangoli Dot Pulse ===== */
+      @keyframes rangDot {
+        0%, 100% { transform: scale(1);   opacity: 0.35; }
+        50%       { transform: scale(1.3); opacity: 0.6; }
+      }
+    </style>
+
+    <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+    </script>
+    <link rel="stylesheet" href="/index.css">
+  </head>
+  <body>
+    <!-- SVG Filters -->
+    <svg style="display:none" aria-hidden="true">
+      <defs>
+        <filter id="liquid-filter" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0" numOctaves="1" result="turbulence">
+            <animate attributeName="baseFrequency" dur="0.8s" values="0;0.015;0" repeatCount="1" begin="indefinite" />
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="glow-filter">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+
+    <div class="bg-noise" aria-hidden="true"></div>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

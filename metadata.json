@@ -1,0 +1,7 @@
+{
+  "name": "Aaryelle - Art & Craft",
+  "description": "A global brand for exquisite sculptures, religious idols, resin art, and torans. Blending tradition with modern aesthetics.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
