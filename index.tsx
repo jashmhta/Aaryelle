@@ -47,6 +47,12 @@ const PRODUCTS: Product[] = [
   { id: 4, name: "Krishna Murti", category: "Religious Idols", price: 3499, image: "/assets/product4_krishna_murti.jpg", desc: "Elegant Lord Krishna playing the divine flute, crafted in premium resin with a marble-finish base. Ideal for pooja rooms and gifting.", year: "2025" },
   { id: 5, name: "Mandala Wall Art", category: "Interior Art", price: 1999, image: "/assets/product5_mandala_art.jpg", desc: "Hand-painted resin mandala wall piece in gold and emerald tones. Brings harmony and elegance to any interior space.", year: "2025" },
   { id: 6, name: "Lakshmi Diya Set", category: "Festive Decor", price: 1299, image: "/assets/product6_lakshmi_diya.jpg", desc: "Resin Goddess Lakshmi figurine with a set of decorative diyas. Illuminate your pooja room with divine grace this festive season.", year: "2025" },
+  { id: 7, name: "Diwali Toran", category: "Torans", price: 1099, image: "/assets/product3_designer_toran.jpg", desc: "Festive Diwali toran with golden marigold motifs and vibrant tassel work. A stunning welcome piece for the doorway during the festival of lights.", year: "2025" },
+  { id: 8, name: "Lakshmi Idol", category: "Religious Idols", price: 2499, image: "/assets/product6_lakshmi_diya.jpg", desc: "Sacred Goddess Lakshmi murti in premium resin with 24k gold accents. Invite abundance and blessings into your home shrine.", year: "2025" },
+  { id: 9, name: "Swastik Wall Plaque", category: "Festive Decor", price: 799, image: "/assets/product1_shubh_labh.jpg", desc: "Auspicious swastik wall plaque with hand-embossed gold detailing. A timeless symbol of prosperity and good fortune for your entrance.", year: "2025" },
+  { id: 10, name: "Golden Mandala Frame", category: "Interior Art", price: 2799, image: "/assets/product5_mandala_art.jpg", desc: "Large format mandala art piece with real gold leaf highlights. A statement wall installation that transforms any living space into a sanctuary.", year: "2025" },
+  { id: 11, name: "Radha Krishna Set", category: "Religious Idols", price: 4499, image: "/assets/product4_krishna_murti.jpg", desc: "Divine Radha Krishna pair in eternal embrace, hand-sculpted in premium resin. A cherished centrepiece for mandirs and gifting occasions.", year: "2025" },
+  { id: 12, name: "Pearl Toran", category: "Torans", price: 1399, image: "/assets/product3_designer_toran.jpg", desc: "Elegant pearl-finish toran with intricate beadwork and silver thread embroidery. Adds a touch of royal grace to your doorway.", year: "2025" },
 ];
 
 const STATS = [
@@ -951,6 +957,7 @@ const ProductRitual = ({ product, onClose }: { product: Product; onClose: () => 
   const imgRef = useRef<HTMLDivElement>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [qty, setQty] = useState(1);
   const { addItem } = useCart();
   const { addToast } = useToast();
   useEffect(() => {
@@ -986,10 +993,17 @@ const ProductRitual = ({ product, onClose }: { product: Product; onClose: () => 
             ))}
           </div>
           <div className="mt-auto pt-6 border-t border-gold/10 space-y-3">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 mb-3">
               <span className="font-display text-3xl text-gold italic">₹{product.price.toLocaleString("en-IN")}</span>
-              <MagneticButton className="bg-gold text-noir px-7 py-3 font-sans text-[10px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors"
-                onClick={() => { addItem(product); addToast(`${product.name} added to cart`); }}>
+              <div className="flex items-center border border-gold/20 rounded-sm">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-9 h-9 flex items-center justify-center text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer" aria-label="Decrease quantity"><Minus className="w-3 h-3" /></button>
+                <span className="w-8 text-center font-sans text-sm text-ivory tabular-nums">{qty}</span>
+                <button onClick={() => setQty(q => Math.min(10, q + 1))} className="w-9 h-9 flex items-center justify-center text-ivory/60 hover:text-gold transition-colors interactive cursor-pointer" aria-label="Increase quantity"><Plus className="w-3 h-3" /></button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <MagneticButton className="flex-1 bg-gold text-noir px-7 py-3 font-sans text-[10px] tracking-[0.2em] uppercase hover:bg-gold-light transition-colors text-center"
+                onClick={() => { for (let i = 0; i < qty; i++) addItem(product); addToast(`${qty > 1 ? `${qty}× ` : ""}${product.name} added to cart`); onClose(); }}>
                 Add to Cart
               </MagneticButton>
             </div>
@@ -1161,7 +1175,7 @@ const TestimonialsSection = () => {
           <p className="font-display text-4xl md:text-5xl text-ivory italic">Loved by Thousands</p>
         </Reveal>
         <div key={active} className="text-center animate-[fadeIn_0.5s_ease-out]">
-          <div className="flex justify-center gap-1 mb-10">{Array.from({ length: t.rating }).map((_, i) => <Star key={i} className="w-3.5 h-3.5 text-gold fill-gold" />)}</div>
+          <div className="flex justify-center gap-1.5 mb-10">{Array.from({ length: t.rating }).map((_, i) => <Star key={i} className="w-4 h-4 text-gold fill-gold" />)}</div>
           <blockquote className="font-display text-2xl md:text-3xl lg:text-4xl text-ivory italic leading-[1.35] mb-10 max-w-3xl mx-auto">&ldquo;{t.text}&rdquo;</blockquote>
           <cite className="not-italic block">
             <div className="font-sans text-[11px] tracking-[0.25em] text-gold uppercase">{t.name}</div>
@@ -1314,6 +1328,8 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
   const heroLabelRef = useRef<HTMLParagraphElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const { toggle: toggleWishlist, has: inWishlist } = useWishlist();
+  const { addItem } = useCart();
+  const { addToast } = useToast();
 
   // GSAP hero entrance + scroll-driven fade
   useEffect(() => {
@@ -1619,10 +1635,16 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
                     aria-label={inWishlist(p.id) ? "Remove from wishlist" : "Add to wishlist"}>
                     <Heart className={`w-3.5 h-3.5 transition-colors ${inWishlist(p.id) ? "fill-gold text-gold" : "text-ivory/60"}`} />
                   </button>
-                  <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-1 group-hover:translate-y-0 transition-transform duration-400">
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
                     <span className="font-sans text-[9px] tracking-widest text-gold uppercase block mb-1">{p.category}</span>
                     <h3 className="font-display text-xl text-ivory italic">{p.name}</h3>
-                    <span className="font-body text-sm text-gold mt-1 block">₹{p.price.toLocaleString("en-IN")}</span>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="font-body text-sm text-gold">₹{p.price.toLocaleString("en-IN")}</span>
+                      <button onClick={e => { e.stopPropagation(); addItem(p); addToast(`${p.name} added to cart`); }}
+                        className="opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gold text-noir px-3 py-1.5 font-sans text-[9px] tracking-widest uppercase hover:bg-gold-light interactive cursor-pointer flex items-center gap-1.5">
+                        <ShoppingBag className="w-3 h-3" /> Add
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>
