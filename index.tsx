@@ -274,6 +274,42 @@ const useAudioEngine = () => {
 // AMBIENT CINEMATIC COMPONENTS
 // ============================================================
 
+// Marigold / rose / saffron petal colors — Indian palette
+const PETAL_COLORS = ["#c9a96e", "#e8935a", "#d4a847", "#eae5dc", "#e07b54", "#c9a96e", "#f0c060"];
+
+const FALLING_PETAL_DATA = Array.from({ length: 22 }, (_, i) => ({
+  id: i,
+  left:   `${(i * 31 + 5) % 100}%`,
+  width:  `${7 + (i * 5) % 10}px`,
+  height: `${11 + (i * 7) % 13}px`,
+  dur:    `${9 + (i * 2.1) % 11}s`,
+  del:    `-${(i * 1.9) % 14}s`,
+  drift:  `${-70 + (i * 23) % 140}px`,
+  rot:    `${160 + (i * 43) % 320}deg`,
+  color:  PETAL_COLORS[i % PETAL_COLORS.length],
+}));
+
+/** PetalFall — marigold & rose petals drifting down from top of viewport */
+const PetalFall = () => {
+  if (REDUCED_MOTION) return null;
+  return (
+    <div className="petal-field" aria-hidden="true">
+      {FALLING_PETAL_DATA.map(p => (
+        <div key={p.id} className="petal" style={{
+          left:       p.left,
+          width:      p.width,
+          height:     p.height,
+          background: p.color,
+          "--dur":    p.dur,
+          "--del":    p.del,
+          "--drift":  p.drift,
+          "--rot":    p.rot,
+        } as React.CSSProperties} />
+      ))}
+    </div>
+  );
+};
+
 /** AmbientAurora — slow-drifting radial gradient orbs layered in the background */
 const AmbientAurora = () => {
   if (REDUCED_MOTION) return null;
@@ -2430,6 +2466,7 @@ const App = () => {
 
   return (
     <>
+      <PetalFall />
       <AmbientAurora />
       <StarField />
       <FireflyField />

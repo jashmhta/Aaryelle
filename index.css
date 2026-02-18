@@ -719,3 +719,45 @@ html, body {
   animation: sectionGlow 4s ease-in-out infinite;
   pointer-events: none;
 }
+
+/* ===== Flower Petal Fall ===== */
+@keyframes petalFall {
+  0%   { transform: translateY(-30px) translateX(0) rotate(0deg) scale(1); opacity: 0; }
+  6%   { opacity: 0.85; }
+  50%  { transform: translateY(50vh) translateX(calc(var(--drift, 60px) * 0.5)) rotate(calc(var(--rot, 270deg) * 0.5)) scale(0.9); }
+  92%  { opacity: 0.45; }
+  100% { transform: translateY(108vh) translateX(var(--drift, 60px)) rotate(var(--rot, 270deg)) scale(0.75); opacity: 0; }
+}
+
+@keyframes petalSway {
+  0%,100% { margin-left: 0; }
+  25%     { margin-left: 12px; }
+  75%     { margin-left: -12px; }
+}
+
+.petal-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.petal {
+  position: absolute;
+  top: -30px;
+  border-radius: 80% 0 80% 0;
+  opacity: 0;
+  animation:
+    petalFall var(--dur, 9s) ease-in infinite var(--del, 0s),
+    petalSway calc(var(--dur, 9s) * 0.4) ease-in-out infinite var(--del, 0s);
+  filter: drop-shadow(0 1px 3px rgba(201,169,110,0.3));
+  will-change: transform, opacity;
+}
+.petal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 60%);
+}
