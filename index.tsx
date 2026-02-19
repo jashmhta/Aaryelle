@@ -274,38 +274,36 @@ const useAudioEngine = () => {
 // AMBIENT CINEMATIC COMPONENTS
 // ============================================================
 
-// Marigold / rose / saffron petal colors — Indian palette
-const PETAL_COLORS = ["#c9a96e", "#e8935a", "#d4a847", "#eae5dc", "#e07b54", "#c9a96e", "#f0c060"];
-
-const FALLING_PETAL_DATA = Array.from({ length: 22 }, (_, i) => ({
-  id: i,
-  left:   `${(i * 31 + 5) % 100}%`,
-  width:  `${7 + (i * 5) % 10}px`,
-  height: `${11 + (i * 7) % 13}px`,
-  dur:    `${9 + (i * 2.1) % 11}s`,
-  del:    `-${(i * 1.9) % 14}s`,
-  drift:  `${-70 + (i * 23) % 140}px`,
-  rot:    `${160 + (i * 43) % 320}deg`,
-  color:  PETAL_COLORS[i % PETAL_COLORS.length],
-}));
-
-/** PetalFall — marigold & rose petals drifting down from top of viewport */
-const PetalFall = () => {
+/** AnimatedFlower — lotus SVG placed at specific decorative spots */
+const AnimatedFlower = ({
+  size = 80, opacity = 0.07, className = "",
+  mode = "spin", dur = 38,
+}: {
+  size?: number; opacity?: number; className?: string;
+  mode?: "spin" | "spin-rev" | "breathe"; dur?: number;
+}) => {
   if (REDUCED_MOTION) return null;
+  const modeClass = mode === "breathe" ? "flower-breathe" : mode === "spin-rev" ? "flower-spin-rev" : "flower-spin";
   return (
-    <div className="petal-field" aria-hidden="true">
-      {FALLING_PETAL_DATA.map(p => (
-        <div key={p.id} className="petal" style={{
-          left:       p.left,
-          width:      p.width,
-          height:     p.height,
-          background: p.color,
-          "--dur":    p.dur,
-          "--del":    p.del,
-          "--drift":  p.drift,
-          "--rot":    p.rot,
-        } as React.CSSProperties} />
-      ))}
+    <div className={`flower-decor absolute ${modeClass} ${className}`}
+      style={{ width: size, height: size, opacity, "--fdur": `${dur}s` } as React.CSSProperties}
+      aria-hidden="true">
+      <svg viewBox="0 0 100 100" width={size} height={size} fill="currentColor">
+        {/* Outer 8 petals */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => (
+          <ellipse key={a} cx="50" cy="21" rx="7" ry="19"
+            opacity={i % 2 === 0 ? 0.85 : 0.65}
+            transform={`rotate(${a} 50 50)`} />
+        ))}
+        {/* Inner 8 petals offset */}
+        {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map(a => (
+          <ellipse key={a} cx="50" cy="30" rx="5" ry="12"
+            opacity={0.4} transform={`rotate(${a} 50 50)`} />
+        ))}
+        {/* Centre */}
+        <circle cx="50" cy="50" r="9" opacity="0.9" />
+        <circle cx="50" cy="50" r="5" fill="none" stroke="rgba(255,249,238,0.35)" strokeWidth="1" />
+      </svg>
     </div>
   );
 };
@@ -1612,6 +1610,11 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           </div>
         </div>
 
+        {/* Flower decoration — bottom right of hero */}
+        <AnimatedFlower size={110} opacity={0.09} mode="spin" dur={42} className="bottom-16 right-8 md:right-16 hidden lg:block" />
+        {/* Flower decoration — top left of hero */}
+        <AnimatedFlower size={70} opacity={0.06} mode="spin-rev" dur={30} className="top-24 left-6 md:left-12 hidden lg:block" />
+
         {/* Scroll indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
           <div className="w-px h-14 bg-gradient-to-b from-gold/45 to-transparent animate-[breathe_2.5s_ease-in-out_infinite]" />
@@ -1648,6 +1651,9 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
       <section className="relative bg-void overflow-hidden">
         {/* Large decorative quotation mark */}
         <div className="absolute top-0 left-8 md:left-14 font-display text-[20vw] text-gold/[0.04] italic leading-none select-none pointer-events-none" aria-hidden="true">&ldquo;</div>
+        {/* Flower decoration — right side */}
+        <AnimatedFlower size={130} opacity={0.06} mode="breathe" dur={10} className="top-12 right-8 md:right-16 hidden lg:block" />
+        <AnimatedFlower size={60} opacity={0.05} mode="spin" dur={50} className="bottom-10 left-4 hidden lg:block" />
         <div className="max-w-[1440px] mx-auto px-6 md:px-14 pt-20 md:pt-44 pb-14 md:pb-32">
           <Reveal y={0} duration={0.7} className="mb-14">
             <p className="gold-shimmer-label font-sans text-[11px] tracking-[0.5em] uppercase">Sacred Philosophy</p>
@@ -1847,6 +1853,9 @@ const HomeView = ({ navigate, onSelectProduct }: { navigate: (v: ViewState) => v
           <ImageParallax src={PRODUCTS[3].image} alt="" className="w-full h-full" intensity={10} />
         </div>
         <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(201,169,110,0.06) 0%, transparent 70%)" }} />
+        {/* Flower decorations — corners of CTA */}
+        <AnimatedFlower size={160} opacity={0.07} mode="spin" dur={55} className="top-6 left-6 hidden md:block" />
+        <AnimatedFlower size={160} opacity={0.07} mode="spin-rev" dur={45} className="bottom-6 right-6 hidden md:block" />
 
         <div className="relative z-10 py-24 md:py-64 px-6 md:px-14 text-center max-w-[1440px] mx-auto">
           {/* Eyebrow */}
@@ -2157,7 +2166,10 @@ const NewsletterSection = () => {
 // ============================================================
 
 const Footer = ({ navigate }: { navigate: (v: ViewState) => void }) => (
-  <footer className="bg-void border-t border-gold/10 px-6 md:px-14 pt-16 pb-8" aria-label="Footer">
+  <footer className="relative bg-void border-t border-gold/10 px-6 md:px-14 pt-16 pb-8 overflow-hidden" aria-label="Footer">
+    {/* Flower decorations in footer corners */}
+    <AnimatedFlower size={90} opacity={0.05} mode="breathe" dur={12} className="top-4 right-8 hidden md:block" />
+    <AnimatedFlower size={65} opacity={0.04} mode="spin" dur={60} className="bottom-4 left-4 hidden md:block" />
     <div className="max-w-[1440px] mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-14 mb-14">
         {/* Brand */}
@@ -2466,7 +2478,6 @@ const App = () => {
 
   return (
     <>
-      <PetalFall />
       <AmbientAurora />
       <StarField />
       <FireflyField />
